@@ -22,9 +22,11 @@ The training process is stage-wise. For simplicity, we do not use joint training
 
 **Stage 1. RPN**
 
-1. run `1_RPN/experiments/script_faster_rcnn_VOC2012_VGG16.m` in MATLAB (note that there are in total 4 stages of training, while running only first stage of RPN is enough here)
-
-2. run `1_RPN/saveProposals.m` in MATLAB
+```
+cd 1_RPN
+matlab ./experiments/script_faster_rcnn_VOC2012_VGG16.m
+matlab saveProposals.m
+```
 
 **Stage 2. CasRPN**
 
@@ -37,7 +39,20 @@ matlab saveProposals.m
 
 **Stage 3. FRCN**
 
+```
+cd 3_FRCN
+bash train.sh
+bash test.sh
+matlab saveDetections.m
+```
+
 **Stage 4. CasFRCN**
+
+```
+cd 4_CasFRCN
+bash train.sh
+bash test.sh
+```
 
 ### Results on PASCAL VOC 2012 ###
 
