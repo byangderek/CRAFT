@@ -28,6 +28,13 @@ The training process is stage-wise. For simplicity, we do not use joint training
 
 **Stage 2. CasRPN**
 
+```
+cd 2_CasRPN
+bash train.sh
+bash test.sh
+matlab saveProposals.m
+```
+
 **Stage 3. FRCN**
 
 **Stage 4. CasFRCN**
