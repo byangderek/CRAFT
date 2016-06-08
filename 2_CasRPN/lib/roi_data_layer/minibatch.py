@@ -101,6 +101,7 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
     # Select sampled values from various arrays:
     labels = labels[keep_inds]
     # Clamp labels for the background RoIs to 0
+    labels[0:fg_rois_per_this_image] = 1
     labels[fg_rois_per_this_image:] = 0
     overlaps = overlaps[keep_inds]
     rois = rois[keep_inds]
@@ -155,7 +156,7 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
     bbox_loss_weights = np.zeros(bbox_targets.shape, dtype=np.float32)
     inds = np.where(clss > 0)[0]
     for ind in inds:
-        cls = clss[ind]
+        cls = 1
         start = 4 * cls
         end = start + 4
         bbox_targets[ind, start:end] = bbox_target_data[ind, 1:]
