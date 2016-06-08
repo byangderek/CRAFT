@@ -4,7 +4,7 @@ The codes are with the CVPR2016 paper ["CRAFT Objects from Images"](http://arxiv
 
 ### Reference ###
 
-If you use our codes or model in your research, we are grateful if you cite the paper:
+If you use our codes in your research, we are grateful if you cite the paper:
 
 ```
 @inproceedings{binyang16craft,
