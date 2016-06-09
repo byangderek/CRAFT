@@ -35,7 +35,7 @@ class pascal_voc(datasets.imdb):
         self._image_ext = '.jpg'
         self._image_index = self._load_image_set_index()
         # Default to roidb handler
-        self._roidb_handler = self.selective_search_roidb
+        self._roidb_handler = self.casrpn_roidb
 
         # PASCAL specific config options
         self.config = {'cleanup'  : True,
@@ -185,6 +185,47 @@ class pascal_voc(datasets.imdb):
             filename = os.path.join(IJCV_path, self.image_index[i] + '.mat')
             raw_data = sio.loadmat(filename)
             box_list.append((raw_data['boxes'][:top_k, :]-1).astype(np.uint16))
+
+        return self.create_roidb_from_box_list(box_list, gt_roidb)
+
+    def casrpn_roidb(self):
+        """
+        Return the database of selective search regions of interest.
+        Ground-truth ROIs are also included.
+
+        This function loads/saves from/to a cache file to speed up future calls.
+        """
+        cache_file = os.path.join(self.cache_path,
+                                  self.name + '_casrpn_roidb.pkl')
+
+        if os.path.exists(cache_file):
+            with open(cache_file, 'rb') as fid:
+                roidb = cPickle.load(fid)
+            print '{} casrpn roidb loaded from {}'.format(self.name, cache_file)
+            return roidb
+
+        if self._image_set != 'test':
+            gt_roidb = self.gt_roidb()
+            ss_roidb = self._load_casrpn_roidb(gt_roidb)
+            roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
+        else:
+            roidb = self._load_casrpn_roidb(None)
+        with open(cache_file, 'wb') as fid:
+            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        print 'wrote casrpn roidb to {}'.format(cache_file)
+
+        return roidb
+
+    def _load_casrpn_roidb(self, gt_roidb):
+        filename = os.path.abspath(os.path.join(self.cache_path, '..',
+                                                'casrpn_data', self.name + '.mat'))
+        assert os.path.exists(filename), \
+               'CasRpn data not found at: {}'.format(filename)
+        raw_data = sio.loadmat(filename)['boxes'].ravel()
+
+        box_list = []
+        for i in xrange(raw_data.shape[0]):
+            box_list.append(raw_data[i][:, 0:4])
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 

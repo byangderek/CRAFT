@@ -18,6 +18,7 @@ import cPickle
 import heapq
 from utils.blob import im_list_to_blob
 import os
+import scipy.io as sio
 
 def _get_image_blob(im):
     """Converts an image into a network input.
@@ -280,6 +281,8 @@ def test_net(net, imdb):
         _t['im_detect'].toc()
 
         _t['misc'].tic()
+        sio.savemat('%s/%d.mat' % (output_dir, i), {'scores': scores, 'boxes': boxes})
+        """
         for j in xrange(1, imdb.num_classes):
             inds = np.where((scores[:, j] > thresh[j]) &
                             (roidb[i]['gt_classes'] == 0))[0]
@@ -305,12 +308,13 @@ def test_net(net, imdb):
             if 0:
                 keep = nms(all_boxes[j][i], 0.3)
                 vis_detections(im, imdb.classes[j], all_boxes[j][i][keep, :])
+        """
         _t['misc'].toc()
 
         print 'im_detect: {:d}/{:d} {:.3f}s {:.3f}s' \
               .format(i + 1, num_images, _t['im_detect'].average_time,
                       _t['misc'].average_time)
-
+    """
     for j in xrange(1, imdb.num_classes):
         for i in xrange(num_images):
             inds = np.where(all_boxes[j][i][:, -1] > thresh[j])[0]
@@ -325,3 +329,4 @@ def test_net(net, imdb):
 
     print 'Evaluating detections'
     imdb.evaluate_detections(nms_dets, output_dir)
+    """
