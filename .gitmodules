@@ -1,3 +1,0 @@
-[submodule "2_CasRPN/caffe-fast-rcnn"]
-	path = 2_CasRPN/caffe-fast-rcnn
-	url = git://github.com/byangderek/caffe-fast-rcnn.git
