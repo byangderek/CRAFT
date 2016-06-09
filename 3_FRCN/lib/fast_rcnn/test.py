@@ -281,6 +281,9 @@ def test_net(net, imdb):
         _t['im_detect'].toc()
 
         _t['misc'].tic()
+        inds = np.where(roidb[i]['gt_classes'] == 0)[0]
+        scores = scores[inds, :]
+        boxes = boxes[inds, :]
         sio.savemat('%s/%d.mat' % (output_dir, i), {'scores': scores, 'boxes': boxes})
         """
         for j in xrange(1, imdb.num_classes):
