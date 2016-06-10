@@ -30,12 +30,13 @@ def get_minibatch(roidb, num_classes):
 
     # Now, build the region of interest and label blobs
     rois_blob = np.zeros((0, 5), dtype=np.float32)
-    labels_blob = np.zeros((0), dtype=np.float32)
+    labels_blob = np.zeros((0, num_classes), dtype=np.float32)
+    cls_loss_blob = np.zeros((0, num_classes), dtype=np.float32)
     bbox_targets_blob = np.zeros((0, 4 * num_classes), dtype=np.float32)
     bbox_loss_blob = np.zeros(bbox_targets_blob.shape, dtype=np.float32)
     # all_overlaps = []
     for im_i in xrange(num_images):
-        labels, overlaps, im_rois, bbox_targets, bbox_loss \
+        labels, cls_loss, overlaps, im_rois, bbox_targets, bbox_loss \
             = _sample_rois(roidb[im_i], fg_rois_per_image, rois_per_image,
                            num_classes)
 
@@ -46,7 +47,8 @@ def get_minibatch(roidb, num_classes):
         rois_blob = np.vstack((rois_blob, rois_blob_this_image))
 
         # Add to labels, bbox targets, and bbox loss blobs
-        labels_blob = np.hstack((labels_blob, labels))
+        labels_blob = np.vstack((labels_blob, labels))
+        cls_loss_blob = np.vstack((cls_loss_blob, cls_loss))
         bbox_targets_blob = np.vstack((bbox_targets_blob, bbox_targets))
         bbox_loss_blob = np.vstack((bbox_loss_blob, bbox_loss))
         # all_overlaps = np.hstack((all_overlaps, overlaps))
@@ -56,7 +58,8 @@ def get_minibatch(roidb, num_classes):
 
     blobs = {'data': im_blob,
              'rois': rois_blob,
-             'labels': labels_blob}
+             'labels': labels_blob,
+             'cls_loss_weights': cls_loss_blob}
 
     if cfg.TRAIN.BBOX_REG:
         blobs['bbox_targets'] = bbox_targets_blob
@@ -72,9 +75,10 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
     labels = roidb['max_classes']
     overlaps = roidb['max_overlaps']
     rois = roidb['boxes']
+    clsIDs = roidb['clsIDs']    
 
     # Select foreground RoIs as those with >= FG_THRESH overlap
-    fg_inds = np.where(overlaps >= cfg.TRAIN.FG_THRESH)[0]
+    fg_inds = np.where((clsIDs == labels) & (overlaps >= cfg.TRAIN.FG_THRESH))[0]
     # Guard against the case when an image has fewer than fg_rois_per_image
     # foreground RoIs
     fg_rois_per_this_image = np.minimum(fg_rois_per_image, fg_inds.size)
@@ -84,8 +88,8 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
                              replace=False)
 
     # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
-    bg_inds = np.where((overlaps < cfg.TRAIN.BG_THRESH_HI) &
-                       (overlaps >= cfg.TRAIN.BG_THRESH_LO))[0]
+    bg_inds = np.where((clsIDs != labels) | ((overlaps < cfg.TRAIN.BG_THRESH_HI) &
+                       (overlaps >= cfg.TRAIN.BG_THRESH_LO)))[0]
     # Compute number of background RoIs to take from this image (guarding
     # against there being fewer than desired)
     bg_rois_per_this_image = rois_per_image - fg_rois_per_this_image
@@ -98,10 +102,16 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
 
     # The indices that we're selecting (both fg and bg)
     keep_inds = np.append(fg_inds, bg_inds)
-    # Select sampled values from various arrays:
-    labels = labels[keep_inds]
-    # Clamp labels for the background RoIs to 0
-    labels[fg_rois_per_this_image:] = 0
+    
+    labeldata = np.zeros((labels.size, num_classes), dtype=np.float32)
+    labeldata[fg_inds,:] = 1
+    cls_loss = np.zeros((labels.size, num_classes), dtype=np.float32)
+    #print shapes.shape
+    for i in xrange(keep_inds.size):
+        cls_loss[keep_inds[i], clsIDs[keep_inds[i]] - 1] = 1
+    cls_loss = cls_loss[keep_inds, :]
+    labeldata = labeldata[keep_inds,:]
+
     overlaps = overlaps[keep_inds]
     rois = rois[keep_inds]
 
@@ -109,7 +119,7 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
             _get_bbox_regression_labels(roidb['bbox_targets'][keep_inds, :],
                                         num_classes)
 
-    return labels, overlaps, rois, bbox_targets, bbox_loss_weights
+    return labeldata, cls_loss, overlaps, rois, bbox_targets, bbox_loss_weights
 
 def _get_image_blob(roidb, scale_inds):
     """Builds an input blob from the images in the roidb at the specified
@@ -156,7 +166,7 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
     inds = np.where(clss > 0)[0]
     for ind in inds:
         cls = clss[ind]
-        start = 4 * cls
+        start = 4 * (cls-1)
         end = start + 4
         bbox_targets[ind, start:end] = bbox_target_data[ind, 1:]
         bbox_loss_weights[ind, start:end] = [1., 1., 1., 1.]

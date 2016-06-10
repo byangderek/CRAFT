@@ -35,7 +35,7 @@ class pascal_voc(datasets.imdb):
         self._image_ext = '.jpg'
         self._image_index = self._load_image_set_index()
         # Default to roidb handler
-        self._roidb_handler = self.selective_search_roidb
+        self._roidb_handler = self.frcn_roidb
 
         # PASCAL specific config options
         self.config = {'cleanup'  : True,
@@ -89,7 +89,7 @@ class pascal_voc(datasets.imdb):
 
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        cache_file = os.path.join(self.cache_path, self.name + '_casfrcn_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
@@ -188,6 +188,49 @@ class pascal_voc(datasets.imdb):
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
+    def frcn_roidb(self):
+        """
+        Return the database of selective search regions of interest.
+        Ground-truth ROIs are also included.
+
+        This function loads/saves from/to a cache file to speed up future calls.
+        """
+        cache_file = os.path.join(self.cache_path,
+                                  self.name + '_frcn_roidb.pkl')
+
+        if os.path.exists(cache_file):
+            with open(cache_file, 'rb') as fid:
+                roidb = cPickle.load(fid)
+            print '{} frcn roidb loaded from {}'.format(self.name, cache_file)
+            return roidb
+
+        if self._image_set != 'test':
+            gt_roidb = self.gt_roidb()
+            ss_roidb = self._load_frcn_roidb(gt_roidb)
+            roidb = datasets.imdb.merge_roidbs(ss_roidb, gt_roidb)
+        else:
+            roidb = self._load_frcn_roidb(None)
+        with open(cache_file, 'wb') as fid:
+            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        print 'wrote frcn roidb to {}'.format(cache_file)
+
+        return roidb
+
+    def _load_frcn_roidb(self, gt_roidb):
+        filename = os.path.abspath(os.path.join(self.cache_path, '..',
+                                                'frcn_data',self.name + '.mat'))
+        assert os.path.exists(filename), \
+               'Frcn data not found at: {}'.format(filename)
+        raw_data = sio.loadmat(filename)['boxes'].ravel()
+
+        box_list = []
+        obj_labels = []
+        for i in xrange(raw_data.shape[0]):
+            box_list.append(raw_data[i][:, 0:4])
+            obj_labels.append(raw_data[i][:,raw_data[i].shape[1]-1].reshape(1,raw_data[i].shape[0]))
+
+        return self.create_roidb_from_box_list(box_list, gt_roidb, obj_labels)
+
     def _load_pascal_annotation(self, index):
         """
         Load image and bounding boxes info from XML file in the PASCAL VOC
@@ -226,7 +269,8 @@ class pascal_voc(datasets.imdb):
         return {'boxes' : boxes,
                 'gt_classes': gt_classes,
                 'gt_overlaps' : overlaps,
-                'flipped' : False}
+                'flipped' : False,
+                'clsIDs' : gt_classes}
 
     def _write_voc_results_file(self, all_boxes):
         use_salt = self.config['use_salt']

@@ -18,6 +18,7 @@ import cPickle
 import heapq
 from utils.blob import im_list_to_blob
 import os
+import scipy.io as sio
 
 def _get_image_blob(im):
     """Converts an image into a network input.
@@ -189,11 +190,11 @@ def im_detect(net, im, boxes):
         scores = net.blobs['cls_score'].data
     else:
         # use softmax estimated probabilities
-        scores = blobs_out['cls_prob']
+        scores = blobs_out['cls_prob'][:, 1, :, 0]
 
     if cfg.TEST.BBOX_REG:
         # Apply bounding-box regression deltas
-        box_deltas = blobs_out['bbox_pred']
+        box_deltas = blobs_out['bbox_pred_80']
         pred_boxes = _bbox_pred(boxes, box_deltas)
         pred_boxes = _clip_boxes(pred_boxes, im.shape)
     else:
@@ -272,19 +273,23 @@ def test_net(net, imdb):
     # timers
     _t = {'im_detect' : Timer(), 'misc' : Timer()}
 
+    raw_data = sio.loadmat('data/frcn_data/%s.mat' % imdb.name)['boxes'].ravel()
     roidb = imdb.roidb
     for i in xrange(num_images):
         im = cv2.imread(imdb.image_path_at(i))
         _t['im_detect'].tic()
+        if roidb[i]['boxes'].shape[0] == 0:
+            continue
         scores, boxes = im_detect(net, im, roidb[i]['boxes'])
         _t['im_detect'].toc()
 
         _t['misc'].tic()
         for j in xrange(1, imdb.num_classes):
-            inds = np.where((scores[:, j] > thresh[j]) &
-                            (roidb[i]['gt_classes'] == 0))[0]
-            cls_scores = scores[inds, j]
-            cls_boxes = boxes[inds, j*4:(j+1)*4]
+            s1 = raw_data[i][:,4+j]
+            cls_scores = scores[:, j-1]
+            cls_scores = cls_scores * s1
+            cls_boxes = boxes[:, (j-1)*4:j*4]
+
             top_inds = np.argsort(-cls_scores)[:max_per_image]
             cls_scores = cls_scores[top_inds]
             cls_boxes = cls_boxes[top_inds, :]
@@ -297,7 +302,6 @@ def test_net(net, imdb):
                 while len(top_scores[j]) > max_per_set:
                     heapq.heappop(top_scores[j])
                 thresh[j] = top_scores[j][0]
-
             all_boxes[j][i] = \
                     np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
                     .astype(np.float32, copy=False)
@@ -324,4 +328,5 @@ def test_net(net, imdb):
     nms_dets = apply_nms(all_boxes, cfg.TEST.NMS)
 
     print 'Evaluating detections'
+    imdb.config['use_salt'] = False
     imdb.evaluate_detections(nms_dets, output_dir)

@@ -5,12 +5,13 @@ layer {
   top: 'data'
   top: 'rois'
   top: 'labels'
+  top: 'cls_loss_weights'
   top: 'bbox_targets'
   top: 'bbox_loss_weights'
   python_param {
     module: 'roi_data_layer.layer'
     layer: 'RoIDataLayer'
-    param_str: "'num_classes': 21"
+    param_str: "'num_classes': 20"
   }
 }
 layer {
@@ -141,11 +142,11 @@ layer {
   bottom: "pool2"
   top: "conv3_1"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -166,11 +167,11 @@ layer {
   bottom: "conv3_1"
   top: "conv3_2"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -191,11 +192,11 @@ layer {
   bottom: "conv3_2"
   top: "conv3_3"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -227,11 +228,11 @@ layer {
   bottom: "pool3"
   top: "conv4_1"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -252,11 +253,11 @@ layer {
   bottom: "conv4_1"
   top: "conv4_2"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -277,11 +278,11 @@ layer {
   bottom: "conv4_2"
   top: "conv4_3"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -313,11 +314,11 @@ layer {
   bottom: "pool4"
   top: "conv5_1"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -338,11 +339,11 @@ layer {
   bottom: "conv5_1"
   top: "conv5_2"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -363,11 +364,11 @@ layer {
   bottom: "conv5_2"
   top: "conv5_3"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -459,10 +460,10 @@ layer {
   }
 }
 layer {
-  name: "cls_score"
+  name: "cls_score_40"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "cls_score"
+  top: "cls_score_40"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -472,7 +473,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 21
+    num_output: 40
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -484,10 +485,10 @@ layer {
   }
 }
 layer {
-  name: "bbox_pred"
+  name: "bbox_pred_80"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "bbox_pred"
+  top: "bbox_pred_80"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -497,7 +498,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 84
+    num_output: 80
     weight_filler {
       type: "gaussian"
       std: 0.001
@@ -509,17 +510,60 @@ layer {
   }
 }
 layer {
+  name: "cls_score_reshape"
+  type: "Reshape"
+  bottom: "cls_score_40"
+  top: "cls_score_reshape"
+  reshape_param {
+    shape {
+      dim: 0
+      dim: 2
+      dim: 20
+      dim: 1
+    }
+  }
+}
+layer {
+  name: "labels_reshape"
+  type: "Reshape"
+  bottom: "labels"
+  top: "labels_reshape"
+  reshape_param {
+    shape {
+      dim: 0
+      dim: 1
+      dim: 20
+      dim: 1
+    }
+  }
+}
+layer {
+  name: "cls_loss_weights_reshape"
+  type: "Reshape"
+  bottom: "cls_loss_weights"
+  top: "cls_loss_weights_reshape"
+  reshape_param {
+    shape {
+      dim: 0
+      dim: 1
+      dim: 20
+      dim: 1
+    }
+  }
+}
+layer {
   name: "loss_cls"
   type: "SoftmaxWithLoss"
-  bottom: "cls_score"
-  bottom: "labels"
+  bottom: "cls_score_reshape"
+  bottom: "labels_reshape"
+  bottom: "cls_loss_weights_reshape"
   top: "loss_cls"
   loss_weight: 1
 }
 layer {
   name: "loss_bbox"
   type: "SmoothL1Loss"
-  bottom: "bbox_pred"
+  bottom: "bbox_pred_80"
   bottom: "bbox_targets"
   bottom: "bbox_loss_weights"
   top: "loss_bbox"

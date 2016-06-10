@@ -76,7 +76,8 @@ class RoIDataLayer(caffe.Layer):
         self._name_to_top_map = {
             'data': 0,
             'rois': 1,
-            'labels': 2}
+            'labels': 2,
+            'cls_loss_weights': 3}
 
         # data blob: holds a batch of N images, each with 3 channels
         # The height and width (100 x 100) are dummy values
@@ -89,19 +90,20 @@ class RoIDataLayer(caffe.Layer):
 
         # labels blob: R categorical labels in [0, ..., K] for K foreground
         # classes plus background
-        top[2].reshape(1)
+        top[2].reshape(1, self._num_classes)
+        top[3].reshape(1, self._num_classes)
 
         if cfg.TRAIN.BBOX_REG:
-            self._name_to_top_map['bbox_targets'] = 3
-            self._name_to_top_map['bbox_loss_weights'] = 4
+            self._name_to_top_map['bbox_targets'] = 4
+            self._name_to_top_map['bbox_loss_weights'] = 5
 
             # bbox_targets blob: R bounding-box regression targets with 4
             # targets per class
-            top[3].reshape(1, self._num_classes * 4)
+            top[4].reshape(1, self._num_classes * 4)
 
             # bbox_loss_weights blob: At most 4 targets per roi are active;
             # thisbinary vector sepcifies the subset of active targets
-            top[4].reshape(1, self._num_classes * 4)
+            top[5].reshape(1, self._num_classes * 4)
 
     def forward(self, bottom, top):
         """Get blobs and copy them into this layer's top blob vector."""

@@ -16,9 +16,9 @@ The codes are tested on Ubuntu 14.04, 256GB Memory, Titan X GPU, MATLAB R2015a.
 3. Download the VGG16 pre-trained model and PASCAL VOC 2012 dataset and make proper links pointing to them
 4. You can create a soft link of folders `caffe-fast-rcnn` and `data` for `2_CasRPN`, `3_FRCN`, and `4_CasFRCN` for convenience.
 
-### Training CRAFT on PASCAL VOC 2012 ###
+### Training and testing ###
 
-The training process is stage-wise. For simplicity, we do not use joint training between RPN and Fast R-CNN networks.
+The whole pipeline is stage-wise. Now we show how to train an object detector using CRAFT approach on PASCAL VOC 2012 train+val dataset and test it on PASCAL VOC 2012 test set. For simplicity, we do not use joint training between RPN and Fast R-CNN networks. 
 
 **Stage 1. RPN**
 
@@ -54,7 +54,7 @@ bash train.sh
 bash test.sh
 ```
 
-### Results on PASCAL VOC 2012 ###
+### Experimental results ###
 
 
 ### Reference ###
@@ -79,5 +79,5 @@ We give our sincere gratitude to the following people, groups and institutions:
 * Shaoqing Ren for the Faster R-CNN project
 * Caffe team
 * VGG team
-* SenseTime Group
+* SenseTime Group Limited
 * NVIDIA Corporation

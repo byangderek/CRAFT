@@ -103,6 +103,7 @@ class imdb(object):
             boxes[:, 2] = widths[i] - oldx1 - 1
             assert (boxes[:, 2] >= boxes[:, 0]).all()
             entry = {'boxes' : boxes,
+                     'clsIDs' : self.roidb[i]['clsIDs'],
                      'gt_overlaps' : self.roidb[i]['gt_overlaps'],
                      'gt_classes' : self.roidb[i]['gt_classes'],
                      'flipped' : True}
@@ -150,12 +151,13 @@ class imdb(object):
 
         return ar, gt_overlaps, recalls, thresholds
 
-    def create_roidb_from_box_list(self, box_list, gt_roidb):
+    def create_roidb_from_box_list(self, box_list, gt_roidb, obj_labels):
         assert len(box_list) == self.num_images, \
                 'Number of boxes must match number of ground-truth images'
         roidb = []
         for i in xrange(self.num_images):
             boxes = box_list[i]
+            clsIDs = obj_labels[i]
             num_boxes = boxes.shape[0]
             overlaps = np.zeros((num_boxes, self.num_classes), dtype=np.float32)
 
@@ -164,15 +166,17 @@ class imdb(object):
                 gt_classes = gt_roidb[i]['gt_classes']
                 gt_overlaps = bbox_overlaps(boxes.astype(np.float),
                                             gt_boxes.astype(np.float))
-                argmaxes = gt_overlaps.argmax(axis=1)
-                maxes = gt_overlaps.max(axis=1)
-                I = np.where(maxes > 0)[0]
-                overlaps[I, gt_classes[argmaxes[I]]] = maxes[I]
+                if gt_overlaps.shape[1] > 0:
+                    argmaxes = gt_overlaps.argmax(axis=1)
+                    maxes = gt_overlaps.max(axis=1)
+                    I = np.where(maxes > 0)[0]
+                    overlaps[I, gt_classes[argmaxes[I]]] = maxes[I]
 
             overlaps = scipy.sparse.csr_matrix(overlaps)
             roidb.append({'boxes' : boxes,
                           'gt_classes' : np.zeros((num_boxes,),
                                                   dtype=np.int32),
+                          'clsIDs' : clsIDs,
                           'gt_overlaps' : overlaps,
                           'flipped' : False})
         return roidb
@@ -186,6 +190,7 @@ class imdb(object):
                                             b[i]['gt_classes']))
             a[i]['gt_overlaps'] = scipy.sparse.vstack([a[i]['gt_overlaps'],
                                                        b[i]['gt_overlaps']])
+            a[i]['clsIDs'] = np.hstack((a[i]['clsIDs'][0],b[i]['clsIDs']))
         return a
 
     def competition_mode(self, on):

@@ -44,7 +44,7 @@ def add_bbox_regression_targets(roidb):
 
     num_images = len(roidb)
     # Infer number of classes from the number of columns in gt_overlaps
-    num_classes = roidb[0]['gt_overlaps'].shape[1]
+    num_classes = roidb[0]['gt_overlaps'].shape[1] - 1
     for im_i in xrange(num_images):
         rois = roidb[im_i]['boxes']
         max_overlaps = roidb[im_i]['max_overlaps']
@@ -59,8 +59,8 @@ def add_bbox_regression_targets(roidb):
     squared_sums = np.zeros((num_classes, 4))
     for im_i in xrange(num_images):
         targets = roidb[im_i]['bbox_targets']
-        for cls in xrange(1, num_classes):
-            cls_inds = np.where(targets[:, 0] == cls)[0]
+        for cls in xrange(num_classes):
+            cls_inds = np.where(targets[:, 0] == (cls+1))[0]
             if cls_inds.size > 0:
                 class_counts[cls] += cls_inds.size
                 sums[cls, :] += targets[cls_inds, 1:].sum(axis=0)
@@ -72,8 +72,8 @@ def add_bbox_regression_targets(roidb):
     # Normalize targets
     for im_i in xrange(num_images):
         targets = roidb[im_i]['bbox_targets']
-        for cls in xrange(1, num_classes):
-            cls_inds = np.where(targets[:, 0] == cls)[0]
+        for cls in xrange(num_classes):
+            cls_inds = np.where(targets[:, 0] == (cls+1))[0]
             roidb[im_i]['bbox_targets'][cls_inds, 1:] -= means[cls, :]
             roidb[im_i]['bbox_targets'][cls_inds, 1:] /= stds[cls, :]
 
