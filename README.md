@@ -1,10 +1,10 @@
 # README #
 
-The codes are with the CVPR2016 paper ["CRAFT Objects from Images"](http://arxiv.org/abs/1604.03239).
+The codes are with the CVPR2016 paper ["CRAFT Objects from Images"](http://byangderek.github.io/projects/craft.html).
 
 In a word, we extend the conventional two-stage object detection framework (first locating object proposals, then classifying object categories) to a four-stage pipeline, in which the proposal localization task is solved with a cascade network of Region Proposal Network (RPN) and Fast R-CNN to improve the proposal quality, while the object classification task is handled by a cascade network of two Fast R-CNN nets with different objective functions (one-hot classification and one-vs-rest classification) to eliminate false positives.
 
-We name our approach "CRAFT" (short for "Cascade Rpn And FasT-rcnn") and show considerable improvement over Fast R-CNN and Faster R-CNN baselines on PASCAL VOC 07/12 and ILSVRC datasets. For more details please refer to our [CVPR2016 paper](http://arxiv.org/abs/1604.03239).
+We name our approach "CRAFT" (short for "Cascade Rpn And FasT-rcnn") and show considerable improvement over Fast R-CNN and Faster R-CNN baselines on PASCAL VOC 07/12 and ILSVRC datasets. For more details please refer to our [CVPR2016 paper](http://byangderek.github.io/projects/craft.html).
 
 The codes are built on [RPN](https://github.com/ShaoqingRen/faster_rcnn) (Stage 1) and [Fast R-CNN](https://github.com/rbgirshick/fast-rcnn) (Stage 2,3,4). It would be easier to use the codes if you are familiar with these two projects.
 
@@ -54,8 +54,13 @@ bash train.sh
 bash test.sh
 ```
 
-### Experimental results ###
+### Results ###
+                          | training data                          | test data            | mAP   
+------------------------- |:--------------------------------------:|:--------------------:|:-----:
+CRAFT, VGG-16             | VOC 2007 trainval + 2012 trainval      | VOC 2007 test        | 75.7% 
+CRAFT, VGG-16             | VOC 2012 trainval                      | VOC 2012 test        | 71.3% 
 
+Note: The real mAP results may vary a little from the above results reported in the paper. We do not adopt joint training between RPN and Fast R-CNN currently.
 
 ### Reference ###
 
